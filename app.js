@@ -12,13 +12,15 @@ const State = {
   geoJson: null,
   palette: 'viridis',
   mapMetric: 'kemandirian_2024_persen',
-  mapMode: 'continuous',  // 'continuous' | 'cluster' | 'bubble' | 'overlay'
+  mapMode: 'continuous',  // 'continuous' | 'cluster' | 'bubble' | 'overlay' | 'lisa'
   pcaMode: 'scatter',     // 'scatter' | 'biplot' | 'radar' | 'parallel' | 'heatmap'
   treeMode: 'treemap',    // 'treemap' | 'sunburst'
+  crumbParts: null,       // Current treemap breadcrumb path (null = Indonesia root)
   centroids: {},          // key -> [lon, lat]
   brushedKeys: new Set(),
   selectedRegion: null,  // Object data daerah yang diklik
   shiftScope: 'NATIONAL',
+  lisaCache: null,        // Cache hasil LISA computation
   filters: {
     type: 'Semua',       // Semua | Kabupaten | Kota
     provinsi: 'ALL',
@@ -221,6 +223,183 @@ function buildCentroids(geo) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// LISA: Local Indicators of Spatial Association
+// ═══════════════════════════════════════════════════════════════
+const LISA_COLORS = {
+  HH: '#CC0000',   // High-High: red – klaster nilai tinggi
+  LL: '#0044BB',   // Low-Low:  blue – klaster nilai rendah
+  HL: '#FF7700',   // High-Low: orange – outlier tinggi di tetangga rendah
+  LH: '#66AAFF',   // Low-High: light blue – outlier rendah di tetangga tinggi
+  NS: '#6b7280'    // Not Significant: grey
+};
+
+const LISA_LABELS = {
+  HH: 'Klaster Tinggi (HH)',
+  LL: 'Klaster Rendah (LL)',
+  HL: 'Outlier Tinggi (HL)',
+  LH: 'Outlier Rendah (LH)',
+  NS: 'Tidak Signifikan'
+};
+
+/**
+ * Bangun matriks bobot K-Nearest Neighbors dari centroid.
+ * @param {Object} centroids - { key: [lon, lat] }
+ * @param {number} k - jumlah tetangga
+ * @returns {Object} W - { key: [neighbor_key, ...] }
+ */
+function computeKNN(centroids, k = 6) {
+  const keys = Object.keys(centroids);
+  const W = {};
+  keys.forEach(i => {
+    const [xi, yi] = centroids[i];
+    const sorted = keys
+      .filter(j => j !== i)
+      .map(j => {
+        const [xj, yj] = centroids[j];
+        return { key: j, d: Math.hypot(xi - xj, yi - yj) };
+      })
+      .sort((a, b) => a.d - b.d)
+      .slice(0, k);
+    W[i] = sorted.map(x => x.key);
+  });
+  return W;
+}
+
+/**
+ * Hitung Local Moran's I dan klasifikasi LISA.
+ * @param {Array} data - State.raw
+ * @param {Object} W   - matriks bobot KNN
+ * @param {string} varKey - nama variabel (default: kemandirian)
+ * @returns {Object} { key: { li, z, lag, type } }
+ */
+function computeLISA(data, W, varKey = 'kemandirian_2024_persen') {
+  // Buat lookup nilai
+  const vals = {};
+  data.forEach(d => { if (d.key) vals[d.key] = d[varKey] ?? 0; });
+
+  const keys = Object.keys(vals);
+  const n = keys.length;
+  const mean = keys.reduce((s, k) => s + vals[k], 0) / n;
+  const variance = keys.reduce((s, k) => s + (vals[k] - mean) ** 2, 0) / n;
+  const std = Math.sqrt(variance) || 1;
+
+  // Standardisasi (z-score)
+  const z = {};
+  keys.forEach(k => { z[k] = (vals[k] - mean) / std; });
+
+  // Spatial lag (rata-rata z tetangga)
+  const lag = {};
+  keys.forEach(i => {
+    const neighbors = W[i] || [];
+    if (!neighbors.length) { lag[i] = 0; return; }
+    // Row-standardized weight (setiap tetangga bobot = 1/k)
+    lag[i] = neighbors.reduce((s, j) => s + (z[j] || 0), 0) / neighbors.length;
+  });
+
+  // Local Moran's I = z_i * sum_j(w_ij * z_j)
+  const liVals = [];
+  const result = {};
+  keys.forEach(i => {
+    const li = z[i] * lag[i];
+    liVals.push(li);
+    result[i] = { li, z: z[i], lag: lag[i] };
+  });
+
+  // Calculate standard deviation of Li for a dynamic threshold
+  const liMean = liVals.reduce((a, b) => a + b, 0) / n;
+  const liStd = Math.sqrt(liVals.reduce((a, b) => a + (b - liMean) ** 2, 0) / n) || 1;
+  // Threshold: at least some fraction of std deviation, OR just a small absolute value
+  // Because 'low-low' clusters have small z-scores (due to right-skewed data), 
+  // their Li is small. We use a lower dynamic threshold to capture them.
+  const SIG_THRESHOLD = Math.min(0.1, liStd * 0.25);
+
+  keys.forEach(i => {
+    const r = result[i];
+    const sig = Math.abs(r.li) >= SIG_THRESHOLD;
+    let type = 'NS';
+    // Khusus untuk LL, karena skewness, kita bisa sedikit melonggarkan batas jika z dan lag konsisten negatif
+    const isLL = r.z < -0.1 && r.lag < -0.1;
+    const isHH = r.z > 0.1 && r.lag > 0.1;
+    
+    if (sig || isLL || isHH) {
+      if      (r.z > 0 && r.lag > 0) type = 'HH';
+      else if (r.z < 0 && r.lag < 0) type = 'LL';
+      else if (r.z > 0 && r.lag < 0) type = 'HL';
+      else if (r.z < 0 && r.lag > 0) type = 'LH';
+    }
+    r.type = type;
+    r.li = +r.li.toFixed(3);
+    r.z = +r.z.toFixed(3);
+    r.lag = +r.lag.toFixed(3);
+  });
+  return result;
+}
+
+/** Siapkan data map untuk mode LISA. */
+function lisaMapData() {
+  if (!State.lisaCache) {
+    const W = computeKNN(State.centroids, 6);
+    State.lisaCache = computeLISA(State.raw, W, 'kemandirian_2024_persen');
+  }
+  const lisa = State.lisaCache;
+  const filteredKeys = new Set(State.filtered.map(d => d.key));
+
+  const mapData = State.raw.map(d => {
+    const r = lisa[d.key];
+    const inFilter = filteredKeys.has(d.key);
+    const color = r ? LISA_COLORS[r.type] : LISA_COLORS.NS;
+    return {
+      name: d.key,
+      value: r ? r.li : 0,
+      raw: d,
+      lisaResult: r,
+      itemStyle: {
+        color,
+        opacity: inFilter ? (r?.type !== 'NS' ? 0.92 : 0.4) : 0.15
+      }
+    };
+  });
+  return mapData;
+}
+
+/** Tooltip formatter untuk mode LISA. */
+function lisaTooltipFmt(p) {
+  const tc = getThemeColors();
+  if (!p.data?.raw) return `<div style="padding:4px"><b style="color:${tc.tooltipText}">${p.name}</b></div>`;
+  const d = p.data.raw;
+  const r = p.data.lisaResult;
+  const typeLabel = r ? LISA_LABELS[r.type] : 'Tidak diketahui';
+  const typeColor = r ? LISA_COLORS[r.type] : '#9ca3af';
+  const kem = fmtID(d.kemandirian_2024_persen, 2) + '%';
+  return `
+    <div style="min-width:210px;line-height:1.6">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${typeColor};margin-bottom:2px">LISA · ${r?.type || 'NS'}</div>
+      <div style="font-size:14px;font-weight:800;color:${tc.tooltipText}">${d.nama_asli}</div>
+      <div style="font-size:11px;color:${tc.axisLabel};margin-bottom:8px">${d.provinsi}</div>
+      <div style="border-top:1px solid ${tc.splitLine};padding-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:${tc.tooltipBoxBg};border-radius:8px;padding:6px 8px">
+          <div style="font-size:10px;color:${tc.axisLabel}">Tipe LISA</div>
+          <div style="font-size:12px;font-weight:700;color:${typeColor}">${typeLabel}</div>
+        </div>
+        <div style="background:${tc.tooltipBoxBg};border-radius:8px;padding:6px 8px">
+          <div style="font-size:10px;color:${tc.axisLabel}">Local Moran's I</div>
+          <div style="font-size:13px;font-weight:700;color:${tc.tooltipText};font-family:monospace">${r ? r.li : '-'}</div>
+        </div>
+        <div style="background:${tc.tooltipBoxBg};border-radius:8px;padding:6px 8px">
+          <div style="font-size:10px;color:${tc.axisLabel}">Kemandirian</div>
+          <div style="font-size:13px;font-weight:700;color:var(--accent);font-family:monospace">${kem}</div>
+        </div>
+        <div style="background:${tc.tooltipBoxBg};border-radius:8px;padding:6px 8px">
+          <div style="font-size:10px;color:${tc.axisLabel}">z-score</div>
+          <div style="font-size:13px;font-weight:700;color:${tc.tooltipText};font-family:monospace">${r ? r.z : '-'}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:${tc.axisLabel};margin-top:8px;text-align:center">KNN k=6 · kemandirian fiskal 2024 · Sumber: BPS</div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // 3. METRIC CONFIG
 // ═══════════════════════════════════════════════════════════════
 const MetricCfg = {
@@ -389,22 +568,14 @@ function updateFilterBadge() {
   if (f.kategori !== 'ALL') active++;
 
   const badge = id('filter-count-badge');
-  const indicator = id('filter-active-indicator');
   const activeBadge = id('filter-active-badge');
 
   if (active > 0) {
-    badge.textContent = active;
-    badge.classList.remove('hidden');
-    badge.classList.add('flex');
-    indicator.classList.remove('hidden');
-    activeBadge.classList.remove('hidden');
-    activeBadge.classList.add('flex');
+    if (badge) { badge.textContent = active; badge.classList.remove('hidden'); badge.classList.add('flex'); }
+    if (activeBadge) { activeBadge.classList.remove('hidden'); activeBadge.classList.add('flex'); }
   } else {
-    badge.classList.add('hidden');
-    badge.classList.remove('flex');
-    indicator.classList.add('hidden');
-    activeBadge.classList.add('hidden');
-    activeBadge.classList.remove('flex');
+    if (badge) { badge.classList.add('hidden'); badge.classList.remove('flex'); }
+    if (activeBadge) { activeBadge.classList.add('hidden'); activeBadge.classList.remove('flex'); }
   }
 }
 
@@ -422,24 +593,35 @@ function resetAllFilters() {
   State.selectedRegion = null;
   State.shiftScope = 'NATIONAL';
 
-  // Reset UI
-  id('filter-provinsi').value = 'ALL';
-  id('filter-kategori').value = 'ALL';
-  id('kem-min').value = 0;
-  id('kem-max').value = State.kemCeil;
-  id('kem-range-display').textContent = `0 – ${State.kemCeil}%`;
+  // Reset UI controls
+  const provSel = id('filter-provinsi');
+  const katSel  = id('filter-kategori');
+  const kemMin  = id('kem-min');
+  const kemMax  = id('kem-max');
+  const kemDisp = id('kem-range-display');
+  if (provSel) provSel.value = 'ALL';
+  if (katSel)  katSel.value  = 'ALL';
+  if (kemMin)  kemMin.value  = 0;
+  if (kemMax)  kemMax.value  = State.kemCeil;
+  if (kemDisp) kemDisp.textContent = `0 – ${State.kemCeil}%`;
 
   document.querySelectorAll('.filter-type-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.filterType === 'Semua');
   });
   document.querySelectorAll('.cluster-filter-check').forEach(cb => {
-    cb.checked = cb.dataset.cluster === 'ALL';
+    cb.checked = (cb.dataset.cluster === 'ALL');
   });
   document.querySelectorAll('.scope-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.scope === 'NATIONAL');
   });
-  id('selected-region-btn-wrap').classList.add('hidden');
-  id('brush-bar').classList.add('hidden');
+
+  const regionWrap = id('selected-region-btn-wrap');
+  const brushBarEl = id('brush-bar');
+  if (regionWrap) regionWrap.classList.add('hidden');
+  if (brushBarEl) brushBarEl.classList.add('hidden');
+
+  // Clear brush on scatter chart
+  State.charts.scatter?.dispatchAction({ type: 'brush', command: 'clear', areas: [] });
 
   applyFilters();
 }
@@ -597,7 +779,7 @@ function renderMap() {
   const geoCommon = {
     map: 'indonesia',
     roam: true,
-    scaleLimit: { min: 0.9, max: 20 },
+    scaleLimit: { min: 1.0, max: 12 },
     zoom: 1.2,
     center: [118, -2.5],
     label: { show: false },
@@ -612,7 +794,44 @@ function renderMap() {
     }
   };
 
+
   const series = [];
+
+  // ── LISA Mode
+  if (mode === 'lisa') {
+    const lisaData = lisaMapData();
+    series.push({
+      id: 'map-main', type: 'map', map: 'indonesia', geoIndex: 0,
+      data: lisaData,
+      tooltip: { formatter: lisaTooltipFmt }
+    });
+    const lisaVm = {
+      show: true,
+      type: 'piecewise',
+      pieces: [
+        { value: 1, label: LISA_LABELS.HH, color: LISA_COLORS.HH },
+        { value: 2, label: LISA_LABELS.LL, color: LISA_COLORS.LL },
+        { value: 3, label: LISA_LABELS.HL, color: LISA_COLORS.HL },
+        { value: 4, label: LISA_LABELS.LH, color: LISA_COLORS.LH },
+        { value: 0, label: LISA_LABELS.NS, color: LISA_COLORS.NS }
+      ],
+      textStyle: { color: tc.vmText, fontSize: 10 },
+      orient: 'vertical',
+      right: 16, bottom: 50,
+      itemWidth: 12, itemHeight: 12,
+      backgroundColor: tc.vmBg,
+      borderColor: tc.vmBorder, borderWidth: 1,
+      padding: [8, 10]
+    };
+    State.charts.map.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'item', backgroundColor: tc.tooltipBg, borderColor: tc.tooltipBorder, textStyle: { color: tc.tooltipText, fontFamily: 'Inter', fontSize: 12 }, extraCssText: `border-radius:10px;padding:12px 14px;box-shadow:${tc.tooltipShadow};` },
+      visualMap: lisaVm,
+      geo: geoCommon,
+      series
+    }, true);
+    return;
+  }
 
   if (showFill) {
     series.push({
@@ -1067,8 +1286,12 @@ function renderTreemap() {
   }
 
   const pal = getPalette();
+  const tc = getThemeColors();
   const filteredKeys = new Set(State.filtered.map(d => d.key));
   const hasBrush = State.brushedKeys.size > 0;
+
+  // Refresh breadcrumb colors with current theme (preserves drill-down position)
+  setHierarchyCrumb(State.crumbParts);
 
   const meanKem = items => {
     const v = items.map(d => d.kemandirian_2024_persen).filter(x => x != null && !isNaN(x));
@@ -1087,7 +1310,11 @@ function renderTreemap() {
     return {
       name: prov,
       value: [Math.round(provPop), +provKem.toFixed(2)],
-      itemStyle: { color: colorInterpolate(provKem, 0, 80), borderColor: '#07090f', borderWidth: 2 },
+      itemStyle: {
+        color: colorInterpolate(provKem, 0, 80),
+        borderColor: tc.isWarm ? '#D6CEC4' : '#07090f',
+        borderWidth: 2
+      },
       children: items.map(d => {
         const kem = d.kemandirian_2024_persen || 0;
         const inView = filteredKeys.has(d.key) && (!hasBrush || State.brushedKeys.has(d.key));
@@ -1098,7 +1325,7 @@ function renderTreemap() {
           itemStyle: {
             color: colorInterpolate(kem, 0, 80),
             opacity: inView ? 1 : 0.22,
-            borderColor: 'rgba(7,9,15,0.5)',
+            borderColor: tc.isWarm ? 'rgba(56,46,38,0.3)' : 'rgba(7,9,15,0.5)',
             borderWidth: 0.8
           }
         };
@@ -1111,7 +1338,7 @@ function renderTreemap() {
   const data = [{
     name: 'Indonesia',
     value: [Math.round(natPop), +natKem.toFixed(2)],
-    itemStyle: { color: colorInterpolate(natKem, 0, 80), borderColor: '#07090f', borderWidth: 3 },
+    itemStyle: { color: colorInterpolate(natKem, 0, 80), borderColor: tc.isWarm ? '#C8BFB2' : '#07090f', borderWidth: 3 },
     children: provNodes
   }];
 
@@ -1120,7 +1347,6 @@ function renderTreemap() {
     legendBar.style.background = `linear-gradient(to right, ${pal.seq.join(',')})`;
   }
 
-  const tc = getThemeColors();
   const tooltip = {
     formatter: treemapTooltipFmt,
     backgroundColor: tc.tooltipBg,
@@ -1157,7 +1383,7 @@ function renderTreemap() {
     series: [{
       type: 'treemap',
       data,
-      roam: true,
+      roam: 'move',
       nodeClick: 'zoomToNode',
       visibleMin: 300,
       breadcrumb: {
@@ -1204,8 +1430,22 @@ function renderTreemap() {
 function setHierarchyCrumb(parts) {
   const el = id('hierarchy-crumb');
   if (!el) return;
-  const clean = (parts || []).filter(Boolean);
-  el.textContent = clean.length ? clean.join('  /  ') : 'Indonesia';
+  // Save to state so colors can be refreshed without losing position
+  State.crumbParts = parts && parts.length ? parts : null;
+  const clean = (State.crumbParts || []).filter(Boolean);
+  const tc = getThemeColors();
+  el.style.color = tc.tooltipText;
+  if (clean.length <= 1) {
+    el.innerHTML = `<span style="color:${tc.tooltipText};font-weight:600">Indonesia</span>`;
+  } else {
+    el.innerHTML = clean.map((part, i) => {
+      const isLast = i === clean.length - 1;
+      const style = isLast
+        ? `color:${tc.isWarm ? '#C85A32' : '#F59E0B'};font-weight:700`
+        : `color:${tc.axisLabel}`;
+      return `<span style="${style}">${part}</span>`;
+    }).join(`<span style="color:${tc.axisLabel};margin:0 6px">/</span>`);
+  }
 }
 
 function handleTreeClick(p) {
@@ -1457,6 +1697,38 @@ function setupEventListeners() {
   id('btn-close-filter').addEventListener('click', closeFilter);
   id('filter-overlay').addEventListener('click', closeFilter);
 
+  // ── Mobile hamburger menu
+  const mobileNav = id('mobile-nav-menu');
+  const hamOpen = id('ham-open');
+  const hamClose = id('ham-close');
+  const mobileBtn = id('btn-mobile-nav');
+  if (mobileBtn && mobileNav) {
+    mobileBtn.addEventListener('click', () => {
+      const isOpen = mobileNav.classList.toggle('open');
+      hamOpen?.classList.toggle('hidden', isOpen);
+      hamClose?.classList.toggle('hidden', !isOpen);
+      mobileBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    // Close mobile nav when a link is clicked
+    mobileNav.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        mobileNav.classList.remove('open');
+        hamOpen?.classList.remove('hidden');
+        hamClose?.classList.add('hidden');
+        mobileBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
+  // Mobile reset button
+  id('btn-reset-all-mobile')?.addEventListener('click', () => {
+    if (mobileNav) {
+      mobileNav.classList.remove('open');
+      hamOpen?.classList.remove('hidden');
+      hamClose?.classList.add('hidden');
+    }
+    resetAllFilters();
+  });
+
   // ── Type filter buttons
   document.querySelectorAll('.filter-type-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1538,6 +1810,7 @@ function setupEventListeners() {
   id('btn-map-cluster')?.addEventListener('click', () => setMapMode('cluster'));
   id('btn-map-bubble')?.addEventListener('click', () => setMapMode('bubble'));
   id('btn-map-overlay')?.addEventListener('click', () => setMapMode('overlay'));
+  id('btn-map-lisa')?.addEventListener('click', () => setMapMode('lisa'));
 
   // ── PCA view modes
   id('btn-pca-scatter')?.addEventListener('click', () => setPcaMode('scatter'));
@@ -1573,7 +1846,8 @@ function setupEventListeners() {
 
   // ── Treemap root
   id('btn-treemap-root').addEventListener('click', () => {
-    setHierarchyCrumb(['Indonesia']);
+    State.crumbParts = null;
+    setHierarchyCrumb(null);
     renderTreemap();
   });
 
@@ -1627,12 +1901,13 @@ function setPcaMode(mode) {
 
 function setMapMode(mode) {
   State.mapMode = mode;
-  const ids = ['btn-map-continuous', 'btn-map-cluster', 'btn-map-bubble', 'btn-map-overlay'];
+  const ids = ['btn-map-continuous', 'btn-map-cluster', 'btn-map-bubble', 'btn-map-overlay', 'btn-map-lisa'];
   const map = {
     continuous: 'btn-map-continuous',
     cluster: 'btn-map-cluster',
     bubble: 'btn-map-bubble',
-    overlay: 'btn-map-overlay'
+    overlay: 'btn-map-overlay',
+    lisa: 'btn-map-lisa'
   };
   ids.forEach(i => id(i)?.classList.toggle('active', i === map[mode]));
   renderMap();
