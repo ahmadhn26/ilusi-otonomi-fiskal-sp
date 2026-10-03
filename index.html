@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth" data-theme="warm-sand">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ilusi Otonomi Fiskal — Dashboard APBD 2024 vs 2025 Indonesia</title>
+  <meta name="description" content="207 dari 508 daerah (40,7%) punya kemandirian fiskal di bawah 10%. Eksplorasi visual APBD 2024–2025, 508 kabupaten/kota.">
+
+  <!-- Google Fonts: Fraunces (editorial display) + Inter (body) + JetBrains Mono (data) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Fraunces', 'Georgia', 'serif'],
+            serif: ['Fraunces', 'Georgia', 'serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Apache ECharts -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+
+  <script>
+    /* Immediate theme initialization: default to warm-sand */
+    (function() {
+      const saved = localStorage.getItem('fiskal_theme');
+      if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'warm-sand');
+      }
+    })();
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    /* ─── Base Theme: OLED/Midnight Glassmorphism (Default) ─── */
+    :root {
+      --bg-base:      #09090b; /* Very deep almost black */
+      --bg-surface:   rgba(24, 24, 27, 0.4); /* Translucent surface */
+      --bg-elevated:  rgba(39, 39, 42, 0.6);
+      --border:       rgba(255, 255, 255, 0.04);
+      --text-primary: #fafafa;
+      --text-muted:   #a1a1aa;
+      --text-dim:     #52525b;
+      --accent:       #F59E0B; /* Kept colorblind safe amber */
+      --accent-dim:   rgba(245,158,11,0.1);
+    }
+
+    /* ─── Accessible Warm Light (Editorial Sand & Terracotta) ─── */
+    html[data-theme="warm-sand"] {
+      --bg-base:      #F5F2EB; /* Natural architectural linen / sand paper */
+      --bg-surface:   rgba(255, 255, 255, 0.88);
+      --bg-elevated:  #EBE4D8;
+      --border:       rgba(56, 46, 38, 0.12);
+      --text-primary: #1C1917; /* Deep charcoal / warm espresso */
+      --text-muted:   #57534E; /* Warm slate */
+      --text-dim:     #8C827A;
+      --accent:       #C85A32; /* Warm terracotta rust */
+      --accent-dim:   rgba(200, 90, 50, 0.12);
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.7; /* Better readability */
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* ─── Custom Scrollbar ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+    html[data-theme="warm-sand"] ::-webkit-scrollbar-thumb { background: #D5CEBE; }
+    html[data-theme="warm-sand"] ::-webkit-scrollbar-thumb:hover { background: #B8B0A0; }
+
+    /* ─── Warm Sand Theme Specific Overrides ─── */
+    html[data-theme="warm-sand"] .text-white {
+      color: #1C1917 !important;
+    }
+    html[data-theme="warm-sand"] .text-slate-100,
+    html[data-theme="warm-sand"] .text-slate-200,
+    html[data-theme="warm-sand"] .text-slate-300 {
+      color: #292524 !important;
+    }
+    html[data-theme="warm-sand"] .text-slate-400 {
+      color: #57534E !important;
+    }
+    html[data-theme="warm-sand"] .headline-display {
+      color: #1C1917 !important;
+    }
+    html[data-theme="warm-sand"] .headline-hook {
+      background: linear-gradient(135deg, #C85A32 0%, #A33C1E 100%) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+    }
+    html[data-theme="warm-sand"] .card {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(56, 46, 38, 0.1);
+      box-shadow: 0 4px 20px rgba(56, 46, 38, 0.05);
+    }
+    html[data-theme="warm-sand"] .card:hover {
+      background: #FFFFFF;
+      border-color: rgba(200, 90, 50, 0.35);
+      box-shadow: 0 10px 30px rgba(56, 46, 38, 0.09);
+    }
+    html[data-theme="warm-sand"] .card-elevated {
+      background: #EBE4D8;
+      border: 1px solid rgba(56, 46, 38, 0.12);
+    }
+    html[data-theme="warm-sand"] header {
+      background: rgba(245, 242, 235, 0.96) !important;
+      border-bottom: 1px solid rgba(56, 46, 38, 0.1) !important;
+      box-shadow: 0 1px 0 rgba(56, 46, 38, 0.06) !important;
+    }
+    html[data-theme="warm-sand"] #filter-sidebar {
+      background: rgba(245, 242, 235, 0.98) !important;
+      border-right: 1px solid rgba(56, 46, 38, 0.12) !important;
+    }
+    html[data-theme="warm-sand"] #filter-overlay {
+      background: rgba(28, 25, 23, 0.4);
+    }
+    html[data-theme="warm-sand"] .btn-pill:hover {
+      color: #1C1917;
+      background: rgba(56, 46, 38, 0.06);
+    }
+    html[data-theme="warm-sand"] .btn-pill.active {
+      color: #C85A32;
+      background: rgba(200, 90, 50, 0.12);
+      border-color: rgba(200, 90, 50, 0.3);
+    }
+    html[data-theme="warm-sand"] #hero > div[style*="background-image:radial-gradient"] {
+      background-image: radial-gradient(rgba(56, 46, 38, 0.08) 1px, transparent 1px) !important;
+    }
+    html[data-theme="warm-sand"] #hero > div[style*="background:radial-gradient"] {
+      background: radial-gradient(circle at 50% 40%, rgba(200, 90, 50, 0.08) 0%, transparent 65%) !important;
+    }
+    html[data-theme="warm-sand"] #hero p[style*="color:#e4e4e7"] {
+      color: #292524 !important;
+    }
+    html[data-theme="warm-sand"] a[href="#section-map"][style*="background:var(--accent)"],
+    html[data-theme="warm-sand"] #btn-clear-brush {
+      color: #FFFFFF !important;
+      background: #C85A32 !important;
+    }
+    html[data-theme="warm-sand"] #map-spotlight,
+    html[data-theme="warm-sand"] #pca-hint,
+    html[data-theme="warm-sand"] .absolute[style*="background:rgba(10,13,20"] {
+      background: rgba(255, 255, 255, 0.96) !important;
+      border: 1px solid rgba(56, 46, 38, 0.1) !important;
+      box-shadow: 0 8px 24px rgba(56, 46, 38, 0.07) !important;
+    }
+    html[data-theme="warm-sand"] #map-spotlight #sp-name {
+      color: #1C1917 !important;
+    }
+    html[data-theme="warm-sand"] #brush-bar {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(200, 90, 50, 0.3);
+      box-shadow: 0 8px 30px rgba(56, 46, 38, 0.08);
+    }
+    html[data-theme="warm-sand"] select option {
+      background: #FAF8F5;
+      color: #1C1917;
+    }
+    html[data-theme="warm-sand"] .nav-dot {
+      background: rgba(56, 46, 38, 0.2);
+    }
+    html[data-theme="warm-sand"] .nav-dot.active {
+      background: #C85A32;
+    }
+    /* Navbar nav links warm-sand */
+    html[data-theme="warm-sand"] .nav-link {
+      color: #78716C !important;
+    }
+    html[data-theme="warm-sand"] .nav-link:hover {
+      color: #C85A32 !important;
+    }
+    html[data-theme="warm-sand"] .nav-link.nav-active {
+      color: #C85A32 !important;
+    }
+    html[data-theme="warm-sand"] .nav-action-btn {
+      background: rgba(255,255,255,0.7) !important;
+      border-color: rgba(56,46,38,0.12) !important;
+      color: var(--text-primary) !important;
+    }
+    html[data-theme="warm-sand"] .nav-action-btn:hover {
+      background: rgba(255,255,255,0.95) !important;
+      border-color: rgba(200,90,50,0.25) !important;
+    }
+
+    /* ─── Surface Cards — Glassmorphism, borderless, spacious ─── */
+    .card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .card:hover {
+      background: rgba(24, 24, 27, 0.6);
+      border-color: rgba(255,255,255,0.08);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .card-elevated {
+      background: var(--bg-elevated);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* ─── Editorial Headline Typography (Fraunces Serif) ─── */
+    .headline-display {
+      font-family: 'Fraunces', Georgia, serif;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+    .font-display {
+      font-family: 'Fraunces', Georgia, serif;
+    }
+    .font-serif {
+      font-family: 'Fraunces', Georgia, serif;
+    }
+    .headline-hook {
+      color: var(--accent);
+      background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* ─── Section Label / Tag ─── */
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+    }
+    .section-label::before {
+      content: "";
+      width: 32px;
+      height: 1px;
+      background-color: var(--accent);
+      opacity: 0.6;
+    }
+
+    /* ─── Divider ─── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ─── Filter Sidebar ─── */
+    #filter-sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 300px;
+      height: 100vh;
+      background: rgba(10, 13, 20, 0.98);
+      border-right: 1px solid var(--border);
+      z-index: 200;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(12px);
+    }
+    #filter-sidebar.open { transform: translateX(0); }
+    #filter-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 199;
+      display: none;
+    }
+    #filter-overlay.visible { display: block; }
+
+    /* ─── Buttons ─── */
+    .btn-pill {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Inter', sans-serif;
+    }
+    .btn-pill:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .btn-pill.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+      border-color: rgba(245,158,11,0.3);
+    }
+
+    /* ─── KPI stat number ─── */
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: -0.03em;
+      color: #f0ede8;
+      line-height: 1;
+    }
+
+    /* ─── Accent underline for key data ─── */
+    .accent-val { color: var(--accent); }
+
+    /* ─── Nav Dot ─── */
+    .nav-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+    .nav-dot.active {
+      background: var(--accent);
+      width: 18px;
+      border-radius: 3px;
+    }
+
+    /* ─── Animate: Scroll cue bob ─── */
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(5px); }
+    }
+    .animate-bob { animation: bob 2s ease-in-out infinite; }
+
+    /* ─── Chart Heights ─── */
+    .chart-lg { width: 100%; height: 560px; }
+    .chart-md { width: 100%; height: 480px; }
+    @media (max-width: 768px) {
+      .chart-lg { height: 420px; }
+      .chart-md { height: 380px; }
+    }
+
+    /* ─── Fade-in on scroll ─── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ─── Horizontal rule with text ─── */
+    .rule-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .rule-label::before, .rule-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── Tooltip base (ECharts) ─── */
+    .echarts-tooltip-dark {
+      background: #0d1117 !important;
+      border: 1px solid rgba(255,255,255,0.1) !important;
+      border-radius: 10px !important;
+      padding: 12px 14px !important;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6) !important;
+    }
+
+    /* ─── Highlight bar ─── */
+    #brush-bar {
+      background: rgba(245,158,11,0.06);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: 10px;
+    }
+
+    /* ─── Delta card positive/negative ─── */
+    .delta-up { color: #34d399; }
+    .delta-dn { color: #f87171; }
+    .delta-ne { color: var(--text-muted); }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- ================================================================
+       LOADING SCREEN
+  ================================================================ -->
+  <div id="loading-screen" class="fixed inset-0 z-[999] flex flex-col items-center justify-center" style="background:#0f1117">
+    <div class="flex flex-col items-center gap-5 max-w-xs w-full px-8 text-center">
+      <div class="w-1 h-12 bg-amber-500 rounded-full" style="animation: bob 1s ease-in-out infinite"></div>
+      <div>
+        <div class="font-serif text-lg font-bold text-white mb-1">Memuat Data</div>
+        <p id="loading-msg" class="text-xs font-mono text-gray-500">Inisialisasi 508 kab/kota...</p>
+      </div>
+      <div class="w-full bg-gray-900 h-px rounded-full overflow-hidden">
+        <div id="loading-bar" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width:5%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       FILTER SIDEBAR
+  ================================================================ -->
+  <div id="filter-overlay"></div>
+  <aside id="filter-sidebar">
+    <div class="p-5 border-b flex items-center justify-between shrink-0" style="border-color:var(--border)">
+      <div>
+        <h3 class="font-semibold text-white text-sm">Filter & Parameter</h3>
+        <p class="text-xs mt-0.5" style="color:var(--text-muted)">Saring observasi secara tersinkronisasi</p>
+      </div>
+      <button id="btn-close-filter" class="w-7 h-7 rounded-lg flex items-center justify-center transition hover:bg-white/10" style="color:var(--text-muted)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="p-5 space-y-6 flex-1 overflow-y-auto">
+      <div id="filter-active-badge" class="hidden items-center justify-between p-3 rounded-lg" style="background:var(--accent-dim);border:1px solid rgba(245,158,11,0.25)">
+        <span class="text-xs font-semibold" style="color:var(--accent)">Filter Aktif</span>
+        <button id="btn-reset-all-filters" class="text-xs font-semibold hover:opacity-70 transition" style="color:var(--accent)">Reset →</button>
+      </div>
+
+      <!-- Jenis Daerah -->
+      <div class="space-y-2">
+        <label class="section-label">Jenis Administrasi</label>
+        <div class="grid grid-cols-3 gap-1 p-1 rounded-lg" style="background:rgba(255,255,255,0.03);border:1px solid var(--border)">
+          <button data-filter-type="Semua" class="filter-type-btn btn-pill active justify-center py-1.5">Semua</button>
+          <button data-filter-type="Kabupaten" class="filter-type-btn btn-pill justify-center py-1.5">Kab.</button>
+          <button data-filter-type="Kota" class="filter-type-btn btn-pill justify-center py-1.5">Kota</button>
+        </div>
+      </div>
+
+      <!-- Provinsi -->
+      <div class="space-y-2">
+        <label class="section-label">Wilayah Provinsi</label>
+        <select id="filter-provinsi" class="w-full rounded-lg px-3 py-2 text-xs focus:outline-none transition" style="background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary)">
+          <option value="ALL">Semua Provinsi (37)</option>
+        </select>
+      </div>
+
+      <!-- Klaster -->
+      <div class="space-y-2">
+        <label class="section-label">Tipologi Fiskal K-Means</label>
+        <div class="space-y-0.5 p-2 rounded-lg" style="background:rgba(255,255,255,0.02);border:1px solid var(--border)">
+          <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/5 cursor-pointer text-xs">
+            <input type="checkbox" data-cluster="ALL" class="cluster-filter-check accent-amber-500" checked>
+            <span style="color:var(--text-primary)">Semua Klaster</span>
+          </label>
+          <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/5 cursor-pointer text-xs">
+            <input type="checkbox" data-cluster="0" class="cluster-filter-check accent-blue-500">
+            <span class="w-2 h-2 rounded-full bg-[#0077BB] shrink-0"></span>
+            <span style="color:var(--text-primary)">K0: Metropolitan Mandiri</span>
+          </label>
+          <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/5 cursor-pointer text-xs">
+            <input type="checkbox" data-cluster="1" class="cluster-filter-check accent-orange-500">
+            <span class="w-2 h-2 rounded-full bg-[#EE7733] shrink-0"></span>
+            <span style="color:var(--text-primary)">K1: Tertinggal & Bergantung</span>
+          </label>
+          <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/5 cursor-pointer text-xs">
+            <input type="checkbox" data-cluster="2" class="cluster-filter-check accent-purple-500">
+            <span class="w-2 h-2 rounded-full bg-[#AA3377] shrink-0"></span>
+            <span style="color:var(--text-primary)">K2: Berkembang / Transisi</span>
+          </label>
+          <label class="flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/5 cursor-pointer text-xs">
+            <input type="checkbox" data-cluster="3" class="cluster-filter-check accent-teal-500">
+            <span class="w-2 h-2 rounded-full bg-[#009988] shrink-0"></span>
+            <span style="color:var(--text-primary)">K3: Akselerasi Belanja Modal</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Kemandirian Range -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="section-label">Kemandirian Fiskal (%)</label>
+          <span id="kem-range-display" class="font-mono text-xs px-2 py-0.5 rounded" style="color:var(--accent);background:var(--accent-dim)">0 – 700%</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="number" id="kem-min" min="0" max="700" value="0" class="rounded-lg px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary)" placeholder="Min %">
+          <input type="number" id="kem-max" min="0" max="700" value="700" class="rounded-lg px-3 py-2 text-xs focus:outline-none" style="background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary)" placeholder="Maks %">
+        </div>
+      </div>
+
+      <!-- Kategori Desentralisasi -->
+      <div class="space-y-2">
+        <label class="section-label">Kategori Otonomi</label>
+        <select id="filter-kategori" class="w-full rounded-lg px-3 py-2 text-xs focus:outline-none transition" style="background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary)">
+          <option value="ALL">Semua Kategori</option>
+          <option value="Sangat Kurang">Sangat Kurang (desentralisasi &lt; 10%)</option>
+          <option value="Kurang">Kurang (10–20%)</option>
+          <option value="Cukup">Cukup (20–30%)</option>
+          <option value="Sedang">Sedang (30–40%)</option>
+          <option value="Baik">Baik (40–50%)</option>
+          <option value="Sangat Baik">Sangat Baik (&gt; 50%)</option>
+        </select>
+      </div>
+
+      <!-- Mode Kontras & Tema Aksesibel -->
+      <div class="space-y-2">
+        <label class="section-label">Mode Kontras &amp; Tema</label>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button type="button" id="theme-opt-warm" class="p-2.5 rounded-lg text-left transition font-medium flex items-center justify-between" style="border:1px solid var(--accent);background:var(--accent-dim);color:var(--text-primary)">
+            <span>☀️ Warm Sand</span>
+            <span class="text-[10px] font-mono" style="color:var(--accent)">Default</span>
+          </button>
+          <button type="button" id="theme-opt-dark" class="p-2.5 rounded-lg text-left transition font-medium flex items-center justify-between" style="border:1px solid var(--border);background:var(--bg-elevated);color:var(--text-muted)">
+            <span>🌙 Midnight</span>
+            <span class="text-[10px] font-mono opacity-60">OLED</span>
+          </button>
+        </div>
+        <p class="text-[11px] leading-relaxed" style="color:var(--text-dim)">
+          Warm Sand mengadopsi palet kertas hangat &amp; kontras tinggi WCAG AAA untuk kenyamanan membaca di ruang terang.
+        </p>
+      </div>
+
+      <!-- Palet Warna -->
+      <div class="space-y-2">
+        <label class="section-label">Palet Aksesibel</label>
+        <div class="space-y-1">
+          <label class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 cursor-pointer" style="border:1px solid var(--border)">
+            <input type="radio" name="palette" value="terracotta" checked class="accent-amber-500">
+            <span class="text-xs" style="color:var(--text-primary)">Terracotta Sand (Editorial)</span>
+            <div class="flex gap-0.5 ml-auto">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#F7ECE1"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#C85A32"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#7B241C"></span>
+            </div>
+          </label>
+          <label class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 cursor-pointer" style="border:1px solid var(--border)">
+            <input type="radio" name="palette" value="viridis" class="accent-amber-500">
+            <span class="text-xs" style="color:var(--text-primary)">Viridis (Sequential)</span>
+            <div class="flex gap-0.5 ml-auto">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#440154"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#21918c"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#fde725"></span>
+            </div>
+          </label>
+          <label class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 cursor-pointer" style="border:1px solid var(--border)">
+            <input type="radio" name="palette" value="cividis" class="accent-amber-500">
+            <span class="text-xs" style="color:var(--text-primary)">Cividis (Optimized)</span>
+            <div class="flex gap-0.5 ml-auto">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#00204d"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#7c879d"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#fdea45"></span>
+            </div>
+          </label>
+          <label class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 cursor-pointer" style="border:1px solid var(--border)">
+            <input type="radio" name="palette" value="tealamber" class="accent-amber-500">
+            <span class="text-xs" style="color:var(--text-primary)">Teal–Amber (Diverging)</span>
+            <div class="flex gap-0.5 ml-auto">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#004d40"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#26a69a"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:#ffca28"></span>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar footer -->
+    <div class="p-4 shrink-0 text-xs font-mono space-y-1" style="border-top:1px solid var(--border);background:rgba(0,0,0,0.3);color:var(--text-muted)">
+      <div class="flex justify-between">
+        <span>Daerah tampil:</span>
+        <span id="sidebar-active-count" class="text-white font-bold">508 / 508</span>
+      </div>
+      <div class="flex justify-between">
+        <span>Provinsi aktif:</span>
+        <span id="sidebar-prov-count" class="text-white font-bold">37</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================================================================
+       EDITORIAL HEADER — Minimal, Clean, Editorial
+  ================================================================ -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl transition-all duration-300" style="background:rgba(245,242,235,0.94);border-bottom:1px solid var(--border)">
+    <div class="max-w-[1400px] mx-auto px-8 h-16 flex items-center justify-between gap-6">
+
+      <!-- Editorial Brand -->
+      <a href="#hero" class="flex items-center gap-3 min-w-0 shrink-0">
+        <div class="flex flex-col gap-0.5">
+          <div class="w-5 h-0.5 rounded-full" style="background:var(--accent)"></div>
+          <div class="w-3 h-0.5 rounded-full" style="background:var(--accent);opacity:0.5"></div>
+        </div>
+        <div class="min-w-0">
+          <span class="text-[15px] font-bold tracking-tight leading-none block" style="font-family:'Fraunces',Georgia,serif;color:var(--text-primary)">Ilusi Otonomi Fiskal</span>
+          <span class="text-[10px] font-mono leading-none mt-0.5 hidden md:block" style="color:var(--text-dim);letter-spacing:0.05em">APBD 2024–2025 · 508 Daerah</span>
+        </div>
+      </a>
+
+      <!-- Primary Navigation -->
+      <nav class="hidden lg:flex items-center gap-1" aria-label="Navigasi Utama">
+        <a href="#section-map" class="nav-link px-3.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150" style="color:var(--text-muted)">Peta Spasial</a>
+        <a href="#section-pca" class="nav-link px-3.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150" style="color:var(--text-muted)">Tipologi</a>
+        <a href="#section-treemap" class="nav-link px-3.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150" style="color:var(--text-muted)">Hierarki</a>
+        <a href="#section-shift" class="nav-link px-3.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150" style="color:var(--text-muted)">Pergeseran</a>
+        <a href="#section-validation" class="nav-link px-3.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150" style="color:var(--text-muted)">Metodologi</a>
+      </nav>
+
+      <!-- Action Controls -->
+      <div class="flex items-center gap-2 shrink-0">
+        <!-- Theme Toggle -->
+        <button id="btn-theme-toggle" class="nav-action-btn flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 cursor-pointer" style="background:rgba(255,255,255,0.6);border:1px solid var(--border);color:var(--text-primary)" title="Beralih antara tema Warm Sand dan Dark OLED">
+          <svg id="theme-icon-dark" class="w-3.5 h-3.5 shrink-0" style="color:var(--accent)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
+          <svg id="theme-icon-light" class="w-3.5 h-3.5 shrink-0 hidden" style="color:var(--accent)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+          <span id="theme-btn-label" class="hidden sm:inline text-[12px]">Mode Gelap</span>
+        </button>
+
+        <!-- Filter Drawer Button -->
+        <button id="btn-open-filter" class="nav-action-btn flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 cursor-pointer" style="background:var(--accent);border:1px solid transparent;color:#fff">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h18m-14 7.5h10m-6 7.5h2"/></svg>
+          <span class="text-[12px]">Filter</span>
+          <span id="filter-count-badge" class="hidden w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center" style="background:rgba(255,255,255,0.25);color:#fff">0</span>
+        </button>
+
+        <!-- Mobile menu hint -->
+        <button id="btn-reset-all" class="nav-action-btn px-3 py-2 rounded-lg text-[12px] transition-all duration-150 cursor-pointer" style="background:rgba(255,255,255,0.6);border:1px solid var(--border);color:var(--text-muted)" title="Reset seluruh filter">Reset</button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================================================================
+       HERO — Full viewport, journalistic hook
+  ================================================================ -->
+  <section id="hero" class="relative min-h-[calc(100vh-4rem)] flex flex-col justify-center px-6 overflow-hidden">
+
+    <!-- Subtle paper texture -->
+    <div class="absolute inset-0 pointer-events-none" style="background-image:radial-gradient(rgba(56,46,38,0.06) 1px, transparent 1px);background-size:36px 36px;"></div>
+
+    <!-- Warm glow blob -->
+    <div class="absolute pointer-events-none" style="top:-5%;left:60%;width:800px;height:600px;background:radial-gradient(circle at 50% 40%, rgba(200,90,50,0.07) 0%, transparent 60%);transform:translateX(-50%);"></div>
+
+    <div class="relative z-10 max-w-5xl mx-auto w-full py-20">
+
+      <!-- Category label -->
+      <div class="section-label mb-8">Kajian Visualisasi Data · Politeknik Statistika STIS · APBD 2024–2025</div>
+
+      <!-- Journalistic Headline -->
+      <h1 class="headline-display text-5xl sm:text-6xl lg:text-[5.5rem] mb-8" style="line-height:1.05">
+        <span class="headline-hook">Ilusi Otonomi</span><br>
+        <span class="italic font-normal" style="opacity:0.85">Fiskal Daerah</span>
+      </h1>
+
+      <!-- Lead paragraph — the hook -->
+      <p class="text-xl font-light mb-5 max-w-3xl leading-relaxed" style="color:var(--text-primary);font-family:'Inter',sans-serif">
+        Tahun 2024 menandai <strong class="font-semibold" style="color:var(--accent)">25 tahun otonomi daerah</strong> di Indonesia — namun sepertiga pendapatan asli daerah (PAD) nasional masih terkonsentrasi di segelintir kota besar. Di balik angka agregat itu, <strong class="font-semibold" style="color:var(--text-primary)">207 dari 508 kabupaten/kota</strong> bertahan dengan kemandirian fiskal di bawah 10%, sepenuhnya mengandalkan kucuran transfer pusat.
+      </p>
+
+      <!-- Context paragraph -->
+      <p class="text-base mb-14 max-w-2xl leading-relaxed" style="color:var(--text-muted);font-family:'Inter',sans-serif">
+        Laporan ini menelusuri neraca APBD 2024 (realisasi) dan rancangan 2025 (anggaran) dari seluruh 508 kab/kota di 37 provinsi — mengungkap pola geografis ketimpangan, empat tipologi fiskal yang tersembunyi di balik data, dan bagaimana prioritas belanja publik bergeser dari satu tahun ke berikutnya.
+      </p>
+
+      <!-- CTA Buttons -->
+      <div class="flex flex-wrap items-center gap-3 mb-20">
+        <a href="#section-map" class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm text-white transition hover:opacity-90" style="background:var(--accent)">
+          Mulai Eksplorasi
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </a>
+        <button onclick="document.getElementById('btn-open-filter').click()" class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl font-medium text-sm transition" style="border:1px solid var(--border);color:var(--text-primary);background:rgba(255,255,255,0.4)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h18m-14 7.5h10m-6 7.5h2"/></svg>
+          Saring Data
+        </button>
+      </div>
+
+      <!-- KPI Summary Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="card p-5">
+          <div class="text-[10px] font-mono uppercase tracking-widest mb-3" style="color:var(--text-muted)">Daerah Dianalisis</div>
+          <div class="text-4xl font-bold font-display mb-1" style="color:var(--text-primary)"><span id="kpi-regions">508</span></div>
+          <div class="text-xs leading-relaxed" style="color:var(--text-dim)">Kab/Kota · 37 Provinsi</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-[10px] font-mono uppercase tracking-widest mb-3" style="color:var(--text-muted)">Kemandirian Rata-rata</div>
+          <div class="text-4xl font-bold font-display mb-1" style="color:var(--accent)"><span id="kpi-kemandirian">19,0%</span></div>
+          <div class="text-xs leading-relaxed" style="color:var(--text-dim)">Kategori: Kurang Mandiri</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-[10px] font-mono uppercase tracking-widest mb-3" style="color:var(--text-muted)">IPM Rata-rata</div>
+          <div class="text-4xl font-bold font-display mb-1" style="color:var(--text-primary)"><span id="kpi-ipm">71,80</span></div>
+          <div class="text-xs leading-relaxed" style="color:var(--text-dim)">Indeks Pembangunan Manusia 2024</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-[10px] font-mono uppercase tracking-widest mb-3" style="color:var(--text-muted)">Populasi Tercakup</div>
+          <div class="text-4xl font-bold font-display mb-1" style="color:var(--text-primary)"><span id="kpi-pop">270 jt</span></div>
+          <div class="text-xs leading-relaxed" style="color:var(--text-dim)">Jiwa seluruh Indonesia</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll cue -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 z-10" style="color:var(--text-dim)">
+      <a href="#section-map" class="flex flex-col items-center gap-1.5 hover:opacity-60 transition">
+        <span class="text-[9px] font-mono tracking-[0.25em] uppercase">Gulir ke bawah</span>
+        <svg class="w-3.5 h-3.5 animate-bob" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       MAIN DASHBOARD
+  ================================================================ -->
+  <main class="max-w-[1400px] mx-auto px-6 py-8 space-y-24">
+
+    <!-- Brushing Bar -->
+    <div id="brush-bar" class="hidden p-4 rounded-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-sm font-semibold text-white">
+            <span>Seleksi Brushing Aktif:</span>
+            <span id="brush-count" class="font-mono text-xs px-2 py-0.5 rounded" style="background:var(--accent-dim);color:var(--accent)">0 daerah</span>
+          </div>
+          <p id="brush-summary" class="text-xs mt-0.5" style="color:var(--text-muted)">Seret kotak di scatter plot → peta diperbarui.</p>
+        </div>
+        <button id="btn-clear-brush" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-900 transition hover:opacity-90 shrink-0" style="background:var(--accent)">
+          Hapus Seleksi ×
+        </button>
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         SECTION 1: GEOSPATIAL MAP
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="section-map" class="space-y-8 scroll-mt-20 fade-in">
+
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-4">
+        <div class="max-w-2xl">
+          <div class="section-label mb-3">01 / Geografi Ketimpangan</div>
+          <h2 class="headline-display text-3xl sm:text-4xl font-bold mb-4 leading-tight" style="color:var(--text-primary)">
+            Peta Ketimpangan: Mandiri di Barat, Bergantung di Timur
+          </h2>
+          <p class="text-base leading-relaxed mb-3" style="color:var(--text-primary);font-family:'Inter',sans-serif">
+            Satu pandangan ke peta langsung menceritakan segalanya: <strong>koridor Jawa–Bali</strong> bersinar terang dengan kemandirian fiskal di atas 50%, sementara hampir seluruh kawasan timur — NTT, Maluku, dan Papua — tenggelam dalam warna gelap ketergantungan transfer.
+          </p>
+          <p class="text-sm leading-relaxed" style="color:var(--text-muted);font-family:'Inter',sans-serif">
+            Ini bukan kebetulan geografis. Nilai Moran's I = +0,39 membuktikan adanya <em>autokorelasi spasial positif</em>: daerah kaya cenderung bertetangga dengan sesama daerah kaya, dan kemiskinan fiskal pun mengelompok dalam kantong-kantong regional yang mengakar. Pilih metrik di sebelah kanan untuk melihat dimensi lain.
+          </p>
+        </div>
+
+        <!-- Metric Switcher -->
+        <div class="flex flex-wrap items-center gap-1 p-1 rounded-xl shrink-0" style="background:var(--bg-surface);border:1px solid var(--border)">
+          <button class="btn-pill active" data-metric="kemandirian_2024_persen">Kemandirian</button>
+          <button class="btn-pill" data-metric="pdrb_per_kapita_rupiah">PDRB/Kapita</button>
+          <button class="btn-pill" data-metric="ipm_2024">IPM</button>
+          <button class="btn-pill" data-metric="persen_miskin_p0_2024">Kemiskinan P0</button>
+          <button class="btn-pill" data-metric="belanja_modal_2024_persen">Belanja Modal</button>
+        </div>
+      </div>
+
+      <!-- Map Container -->
+      <div class="relative rounded-xl overflow-hidden" style="background:var(--bg-surface);border:1px solid var(--border)">
+
+        <!-- Mode Toggle -->
+        <div class="absolute top-3 right-3 z-10 flex items-center gap-1 p-1 rounded-lg backdrop-blur-md" style="background:rgba(10,13,20,0.85);border:1px solid var(--border)">
+          <button id="btn-map-continuous" class="btn-pill active text-xs py-1 px-2.5">Choropleth Gradasi</button>
+          <button id="btn-map-cluster" class="btn-pill text-xs py-1 px-2.5">Choropleth Klaster</button>
+          <button id="btn-map-bubble" class="btn-pill text-xs py-1 px-2.5">Simbol Proporsional</button>
+          <button id="btn-map-overlay" class="btn-pill text-xs py-1 px-2.5">Gabungan Lapisan</button>
+        </div>
+
+        <!-- Zoom Controls -->
+        <div class="absolute bottom-3 right-3 z-10 flex flex-col gap-1 p-1 rounded-lg backdrop-blur-md" style="background:rgba(10,13,20,0.85);border:1px solid var(--border)">
+          <button id="btn-zi" class="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition hover:bg-white/10" style="color:var(--text-primary)">+</button>
+          <button id="btn-zo" class="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition hover:bg-white/10" style="color:var(--text-primary)">−</button>
+          <button id="btn-zr" class="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition hover:bg-white/10" style="color:var(--accent)" title="Reset">⊡</button>
+        </div>
+
+        <!-- Spotlight Card -->
+        <div id="map-spotlight" class="absolute bottom-3 left-3 z-10 p-4 rounded-xl max-w-[220px] hidden sm:block shadow-xl backdrop-blur-md" style="background:rgba(10,13,20,0.9);border:1px solid var(--border)">
+          <div class="text-[10px] font-mono font-bold uppercase tracking-wider mb-1" id="sp-type" style="color:var(--accent)">–</div>
+          <div class="text-sm font-semibold text-white truncate" id="sp-name">Arahkan ke wilayah</div>
+          <div class="text-xs truncate mb-2" id="sp-prov" style="color:var(--text-muted)">Sorot untuk rincian</div>
+          <div class="flex items-center justify-between gap-4 pt-2 text-xs font-mono" style="border-top:1px solid var(--border)">
+            <div>
+              <span class="block text-[10px]" style="color:var(--text-muted)">Kemandirian</span>
+              <span class="font-bold" style="color:var(--accent)" id="sp-kem">–</span>
+            </div>
+            <div>
+              <span class="block text-[10px]" style="color:var(--text-muted)">IPM 2024</span>
+              <span class="font-bold text-blue-400" id="sp-ipm">–</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="map-chart" class="chart-lg"></div>
+      </div>
+
+      <!-- Insight cards: 2x2 grid with big numbers -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <!-- Card 1: Big stat -->
+        <div class="card p-6 space-y-3">
+          <div class="text-[10px] font-mono uppercase tracking-widest" style="color:var(--accent)">Temuan Utama · 2024</div>
+          <div class="text-5xl font-bold font-display" style="color:var(--accent)">40,7%</div>
+          <div>
+            <h3 class="text-sm font-semibold mb-1" style="color:var(--text-primary)">Daerah dengan Kemandirian di Bawah 10%</h3>
+            <p class="text-xs leading-relaxed" style="color:var(--text-muted);font-family:'Inter',sans-serif">
+              207 dari 508 kabupaten/kota nyaris tidak punya pendapatan dari sumber sendiri. Setiap rupiah yang mereka belanjakan, sebagian besar berasal dari transfer pusat — bukan dari pajak dan retribusi lokal.
+            </p>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="card p-6 space-y-3">
+          <div class="text-[10px] font-mono uppercase tracking-widest" style="color:#EE7733">Kesenjangan Timur</div>
+          <div class="text-5xl font-bold font-display" style="color:var(--text-primary)">8 dari 10</div>
+          <div>
+            <h3 class="text-sm font-semibold mb-1" style="color:var(--text-primary)">Daerah Papua &amp; Maluku Sangat Bergantung</h3>
+            <p class="text-xs leading-relaxed" style="color:var(--text-muted);font-family:'Inter',sans-serif">
+              68 dari 85 daerah di kawasan NTT, Maluku, dan Papua memiliki kemandirian fiskal di bawah 10%. Kesenjangan ini mencerminkan warisan pembangunan yang belum merata.
+            </p>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="card p-6 space-y-3">
+          <div class="text-[10px] font-mono uppercase tracking-widest" style="color:#009988">Autokorelasi Spasial</div>
+          <div class="text-5xl font-bold font-display" style="color:var(--text-primary)">+0,39</div>
+          <div>
+            <h3 class="text-sm font-semibold mb-1" style="color:var(--text-primary)">Moran's I: Daerah Kaya Berkelompok</h3>
+            <p class="text-xs leading-relaxed" style="color:var(--text-muted);font-family:'Inter',sans-serif">
+              Nilai Moran's I positif (+0,39) berarti daerah mandiri cenderung berdekatan satu sama lain — begitu pula yang miskin fiskal. Pola ini bukan kebetulan, melainkan cerminan ketimpangan struktural jangka panjang.
+            </p>
+          </div>
+        </div>
+
+        <!-- Card 4: Spatial Interaction Guide -->
+        <div class="card p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-[10px] font-mono uppercase tracking-widest" style="color:var(--accent)">Panduan Peta</div>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono" style="background:var(--accent-dim);color:var(--accent)">
+                <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--accent)"></span> Sinkron
+              </span>
+            </div>
+            <h3 class="text-sm font-semibold mb-4" style="color:var(--text-primary);font-family:'Fraunces',Georgia,serif">Cara Membaca Peta Ini</h3>
+          </div>
+
+          <div class="space-y-3 text-xs" style="color:var(--text-muted)">
+            <div class="flex items-start gap-3">
+              <span class="px-2 py-1 rounded text-[10px] font-mono font-bold shrink-0" style="background:var(--bg-elevated);color:var(--accent);border:1px solid var(--border)">01</span>
+              <p class="leading-relaxed" style="font-family:'Inter',sans-serif">
+                <strong style="color:var(--text-primary)">Arahkan kursor</strong> ke suatu wilayah untuk melihat ringkasan cepat: nama daerah, rasio kemandirian, dan skor IPM.
+              </p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="px-2 py-1 rounded text-[10px] font-mono font-bold shrink-0" style="background:var(--bg-elevated);color:var(--accent);border:1px solid var(--border)">02</span>
+              <p class="leading-relaxed" style="font-family:'Inter',sans-serif">
+                <strong style="color:var(--text-primary)">Klik untuk fokus</strong> — peta mengunci pilihan dan Seksi 04 otomatis menampilkan neraca fiskal daerah tersebut.
+              </p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="px-2 py-1 rounded text-[10px] font-mono font-bold shrink-0" style="background:var(--bg-elevated);color:var(--accent);border:1px solid var(--border)">03</span>
+              <p class="leading-relaxed" style="font-family:'Inter',sans-serif">
+                <strong style="color:var(--text-primary)">Ganti tampilan</strong> lewat tombol di sudut kanan atas peta: Gradasi Warna, Klaster Tipologi, atau Simbol Proporsional.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BPS Attribution Map -->
+      <p class="text-[11px] font-mono" style="color:var(--text-dim)">
+        <strong style="color:var(--text-muted)">Sumber: BPS</strong> — Statistik Keuangan Pemerintah Kabupaten/Kota 2024 &amp; 2025 · IPM BPS 2024 · P0 Kemiskinan BPS 2024 · PDRB BPS 2024 · Diakses 24 Sep 2026.
+      </p>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         SECTION 2: PCA SCATTER & K-MEANS
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="section-pca" class="space-y-8 scroll-mt-20 fade-in">
+
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div class="max-w-xl">
+          <div class="section-label mb-3">02 / Analisis Multivariat</div>
+          <h2 class="headline-display text-3xl sm:text-4xl font-bold mb-4 leading-tight" style="color:var(--text-primary)">
+            Empat Wajah Fiskal Daerah Indonesia
+          </h2>
+          <p class="text-sm leading-relaxed mb-3" style="color:var(--text-primary);font-family:'Inter',sans-serif">
+            Di balik angka tunggal kemandirian, tersembunyi perbedaan karakter yang jauh lebih dalam. Dengan mereduksi 10 variabel fiskal melalui PCA lalu mengelompokkan 506 daerah menggunakan K-Means, muncul <strong>empat tipologi yang berbeda secara fundamental</strong> — bukan sekadar variasi derajat, melainkan perbedaan struktur ekonomi yang sesungguhnya.
+          </p>
+          <p class="text-xs leading-relaxed" style="color:var(--text-muted);font-family:'Inter',sans-serif">
+            Seret area pada scatter plot untuk memilih kelompok daerah — pilihan akan tersinkronisasi ke peta dan treemap secara langsung.
+          </p>
+          <div class="text-[11px] font-mono mt-2" style="color:var(--text-dim)">
+            Sumber: BPS (Publikasi Indikator Keuangan Daerah 2024–2025) &amp; Kemenkeu RI · Diakses 24 Sep 2026
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <div class="flex items-center gap-1 p-1 rounded-xl" style="background:var(--bg-surface);border:1px solid var(--border)">
+            <button id="btn-pca-scatter" class="btn-pill active text-xs py-1 px-2.5">Scatter PCA</button>
+            <button id="btn-pca-biplot" class="btn-pill text-xs py-1 px-2.5">Biplot</button>
+            <button id="btn-pca-radar" class="btn-pill text-xs py-1 px-2.5">Radar</button>
+            <button id="btn-pca-parallel" class="btn-pill text-xs py-1 px-2.5">Paralel</button>
+            <button id="btn-pca-heatmap" class="btn-pill text-xs py-1 px-2.5">Heatmap Klaster</button>
+          </div>
+          <button id="btn-reset-brush" class="px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 flex items-center gap-1.5" style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text-muted)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Reset Brush
+          </button>
+        </div>
+      </div>
+
+      <!-- BPS Source Attribution Multivariate -->
+      <div class="flex items-center gap-3 pb-1">
+        <span class="text-[11px] font-mono" style="color:var(--text-dim)">
+          <strong style="color:var(--text-muted)">Sumber: BPS</strong> — 10 variabel numerik: kemandirian fiskal, derajat desentralisasi, rasio pajak, efektivitas PAD, belanja operasi, belanja modal, belanja transfer, IPM, P0 kemiskinan, PDRB per kapita · 508 kab/kota (2 tanpa skor PCA) · Diakses 24 Sep 2026
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        <!-- Scatter Chart -->
+        <div class="lg:col-span-2 relative rounded-xl overflow-hidden p-1" style="background:var(--bg-surface);border:1px solid var(--border)">
+          <div id="pca-hint" class="absolute bottom-4 left-4 z-10 text-[11px] font-mono px-3 py-1.5 rounded-lg backdrop-blur" style="color:var(--text-muted);background:rgba(10,13,20,0.8);border:1px solid var(--border)">
+            Seret area → Brushing &amp; Linking ke peta dan treemap
+          </div>
+          <div id="scatter-chart" class="chart-lg"></div>
+        </div>
+
+        <!-- Cluster Cards (right column) -->
+        <div class="space-y-3">
+
+          <!-- Distribution Bar -->
+          <div class="card p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="section-label text-[10px]">Distribusi Klaster</span>
+              <span class="text-[10px] font-mono" style="color:var(--text-muted)">508 daerah</span>
+            </div>
+            <div class="space-y-2">
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="flex items-center gap-2" style="color:var(--text-primary)">
+                    <span class="w-2 h-2 rounded-full bg-[#0077BB]"></span>K0 Metropolitan
+                  </span>
+                  <span class="font-mono text-[#0077BB] font-semibold">83 · 16,3%</span>
+                </div>
+                <div class="h-1 w-full rounded-full" style="background:var(--bg-elevated)">
+                  <div class="h-full bg-[#0077BB] rounded-full" style="width:16.3%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="flex items-center gap-2" style="color:var(--text-primary)">
+                    <span class="w-2 h-2 rounded-full bg-[#EE7733]"></span>K1 Tertinggal
+                  </span>
+                  <span class="font-mono text-[#EE7733] font-semibold">32 · 6,3%</span>
+                </div>
+                <div class="h-1 w-full rounded-full" style="background:var(--bg-elevated)">
+                  <div class="h-full bg-[#EE7733] rounded-full" style="width:6.3%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="flex items-center gap-2" style="color:var(--text-primary)">
+                    <span class="w-2 h-2 rounded-full bg-[#AA3377]"></span>K2 Berkembang
+                  </span>
+                  <span class="font-mono text-[#AA3377] font-semibold">325 · 64,0%</span>
+                </div>
+                <div class="h-1 w-full rounded-full" style="background:var(--bg-elevated)">
+                  <div class="h-full bg-[#AA3377] rounded-full" style="width:64.0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-xs mb-1">
+                  <span class="flex items-center gap-2" style="color:var(--text-primary)">
+                    <span class="w-2 h-2 rounded-full bg-[#009988]"></span>K3 Akselerasi
+                  </span>
+                  <span class="font-mono text-[#009988] font-semibold">66 · 13,0%</span>
+                </div>
+                <div class="h-1 w-full rounded-full" style="background:var(--bg-elevated)">
+                  <div class="h-full bg-[#009988] rounded-full" style="width:13.0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cluster Compact Cards -->
+          <div class="card p-4 flex items-center justify-between hover:-translate-y-1 transition-transform">
+            <div class="flex items-start gap-3">
+              <div class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0" style="background:#0077BB;box-shadow:0 0 12px rgba(0,119,187,0.6)"></div>
+              <div>
+                <div class="text-sm font-semibold text-white">K0 · Metropolitan Mandiri</div>
+                <div class="text-xs font-mono mt-1" style="color:var(--text-muted)">83 daerah · IPM avg 80,02</div>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">Kemandirian</div>
+              <div class="text-base font-bold font-mono text-[#0077BB]">53,96%</div>
+            </div>
+          </div>
+
+          <div class="card p-4 flex items-center justify-between hover:-translate-y-1 transition-transform">
+            <div class="flex items-start gap-3">
+              <div class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0" style="background:#EE7733;box-shadow:0 0 12px rgba(238,119,51,0.6)"></div>
+              <div>
+                <div class="text-sm font-semibold text-white">K1 · Tertinggal &amp; Bergantung</div>
+                <div class="text-xs font-mono mt-1" style="color:var(--text-muted)">32 daerah · P0 avg 18,76%</div>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">Kemandirian</div>
+              <div class="text-base font-bold font-mono text-[#EE7733]">6,88%</div>
+            </div>
+          </div>
+
+          <div class="card p-4 flex items-center justify-between hover:-translate-y-1 transition-transform">
+            <div class="flex items-start gap-3">
+              <div class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0" style="background:#AA3377;box-shadow:0 0 12px rgba(170,51,119,0.6)"></div>
+              <div>
+                <div class="text-sm font-semibold text-white">K2 · Berkembang / Transisi</div>
+                <div class="text-xs font-mono mt-1" style="color:var(--text-muted)">325 daerah · Blj. Ops 71,12%</div>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">Kemandirian</div>
+              <div class="text-base font-bold font-mono text-[#AA3377]">13,24%</div>
+            </div>
+          </div>
+
+          <div class="card p-4 flex items-center justify-between hover:-translate-y-1 transition-transform">
+            <div class="flex items-start gap-3">
+              <div class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0" style="background:#009988;box-shadow:0 0 12px rgba(0,153,136,0.6)"></div>
+              <div>
+                <div class="text-sm font-semibold text-white">K3 · Akselerasi Modal</div>
+                <div class="text-xs font-mono mt-1" style="color:var(--text-muted)">66 daerah · PDRB/kapita Ttg.</div>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-[10px] uppercase tracking-wider font-semibold" style="color:var(--text-muted)">Kemandirian</div>
+              <div class="text-base font-bold font-mono text-[#009988]">9,69%</div>
+            </div>
+          </div>
+
+          <p class="text-[11px] leading-relaxed px-1" style="color:var(--text-muted)">
+            Pencilan: 2 daerah tanpa PCA (Barito Utara, Pegunungan Bintang). K0 mandiri (53,96%) vs K1 6,88%. K3 kaya sumber daya (PDRB/kapita tinggi) tetapi kemandirian hanya 9,69% — belanja modal 29,51%. Beberapa kota/kabupaten kategori desentralisasi Sangat Baik punya rasio kemandirian di atas 100% (mis. Badung) dan perlu dibaca sebagai outlier encoding, bukan “lebih dari mandiri”.
+          </p>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         SECTION 3: TREEMAP HIERARCHY
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="section-treemap" class="space-y-8 scroll-mt-20 fade-in">
+
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div class="max-w-xl">
+          <div class="section-label mb-3">03 / Struktur Hierarkis</div>
+          <h2 class="headline-display text-3xl sm:text-4xl font-bold mb-4 leading-tight" style="color:var(--text-primary)">
+            Siapa yang Paling Terdampak?
+          </h2>
+          <p class="text-sm leading-relaxed mb-3" style="color:var(--text-primary);font-family:'Inter',sans-serif">
+            Ketimpangan fiskal tidak hanya soal jumlah daerah — ia soal <strong>berapa jiwa</strong> yang hidup di bawahnya. Treemap ini memvisualisasikan tiga level hierarki (Nasional → Provinsi → Kab/Kota) dengan dua encoding sekaligus: luas kotak mencerminkan jumlah penduduk, warna mencerminkan tingkat kemandirian.
+          </p>
+          <p class="text-xs leading-relaxed" style="color:var(--text-muted);font-family:'Inter',sans-serif">
+            Klik sebuah provinsi untuk menelusuri daerahnya. Gunakan tombol breadcrumb untuk kembali ke tampilan nasional.
+          </p>
+          <div class="text-[11px] font-mono mt-2" style="color:var(--text-dim)">
+            Sumber: BPS (Proyeksi Penduduk 2024 &amp; Statistik Keuangan Daerah 2024–2025)
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <div class="flex items-center gap-1 p-1 rounded-xl" style="background:var(--bg-surface);border:1px solid var(--border)">
+            <button id="btn-tree-treemap" class="btn-pill active text-xs py-1 px-2.5">Treemap Mode</button>
+            <button id="btn-tree-sunburst" class="btn-pill text-xs py-1 px-2.5">Sunburst Hirarki</button>
+          </div>
+          <button id="btn-treemap-root" class="px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0 flex items-center gap-1.5" style="background:var(--bg-surface);border:1px solid var(--border);color:var(--text-muted)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+            Reset Nasional
+          </button>
+        </div>
+      </div>
+
+      <div class="rounded-xl overflow-hidden p-1" style="background:var(--bg-surface);border:1px solid var(--border)">
+        <div id="hierarchy-crumb" class="px-4 pt-3 text-[11px] font-mono" style="color:var(--text-muted)">Indonesia</div>
+        <div id="treemap-chart" class="chart-lg"></div>
+      </div>
+
+      <!-- Color scale legend + BPS source -->
+      <div class="card p-4 flex flex-col gap-3 text-xs">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+          <span class="shrink-0 font-medium" style="color:var(--text-muted)">Skala warna kemandirian fiskal (%):</span>
+          <div class="flex items-center gap-3 flex-1">
+            <span class="font-mono text-[11px] shrink-0" style="color:var(--text-muted)">Rendah (0%)</span>
+            <div id="treemap-legend-bar" class="h-2 flex-1 rounded-full" style="background:var(--bg-elevated)"></div>
+            <span class="font-mono text-[11px] shrink-0" style="color:var(--text-muted)">Tinggi (80%)</span>
+          </div>
+          <div class="font-mono text-[11px] shrink-0 flex items-center gap-1.5" style="color:var(--text-muted)">
+            <span class="w-2 h-2 rounded" style="background:var(--bg-elevated)"></span>
+            Luas ∝ Penduduk BPS 2024
+          </div>
+        </div>
+        <p class="text-[11px] font-mono" style="color:var(--text-dim)">
+          <strong style="color:var(--text-muted)">Sumber: BPS</strong> — Publikasi "Jumlah Penduduk Hasil Proyeksi 2024" &amp; "Statistik Keuangan Pemerintah Daerah Tingkat II 2024". URL: bps.go.id · Diakses 24 Sep 2026. 3 Level Hierarki: Nasional (1) → Provinsi (37) → Kab/Kota (508).
+        </p>
+      </div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         SECTION 4: BUDGET SHIFT
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="section-shift" class="space-y-8 scroll-mt-20 fade-in">
+
+      <div class="max-w-2xl">
+        <div class="section-label mb-3">04 / Komparasi Kebijakan</div>
+        <h2 class="headline-display text-3xl sm:text-4xl font-bold mb-4 leading-tight" style="color:var(--text-primary)">
+          Ke Mana Anggaran Bergeser?
+        </h2>
+        <p class="text-base leading-relaxed mb-3" style="color:var(--text-primary);font-family:'Inter',sans-serif">
+          Ketika realisasi 2024 bertemu rencana 2025, terlihat apakah daerah belajar dari pengalaman atau hanya mengulang pola lama. Grafik ini membandingkan proporsi masing-masing pos belanja — dari operasional hingga modal — antara <strong>realisasi audit 2024</strong> dan <strong>plafon APBD 2025</strong>.
+        </p>
+        <p class="text-sm leading-relaxed" style="color:var(--text-muted);font-family:'Inter',sans-serif">
+          Pilih perspektif: Nasional sebagai rata-rata seluruh daerah, atau salah satu dari empat klaster tipologi — masing-masing menunjukkan pola pergeseran yang berbeda. Klik daerah di peta untuk melihat neraca fiskal spesifik.
+        </p>
+        <p class="text-[11px] font-mono mt-3" style="color:var(--text-dim)">
+          <strong style="color:var(--text-muted)">Sumber: BPS</strong> — Statistik Keuangan Pemerintah Daerah Tingkat II 2024 &amp; 2025 · Diakses 24 Sep 2026
+        </p>
+      </div>
+
+      <!-- Scope Filter Pills -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="scope-btn btn-pill active" data-scope="NATIONAL">Nasional</button>
+        <button class="scope-btn btn-pill" data-scope="CLUSTER_0">K0 Metropolitan</button>
+        <button class="scope-btn btn-pill" data-scope="CLUSTER_1">K1 Tertinggal</button>
+        <button class="scope-btn btn-pill" data-scope="CLUSTER_2">K2 Berkembang</button>
+        <button class="scope-btn btn-pill" data-scope="CLUSTER_3">K3 Akselerasi</button>
+        <div id="selected-region-btn-wrap" class="hidden">
+          <button class="scope-btn btn-pill active" data-scope="SELECTED" id="selected-region-btn">Daerah Terpilih</button>
+        </div>
+      </div>
+
+      <!-- Chart and Delta Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        <div class="lg:col-span-2 rounded-xl overflow-hidden p-1" style="background:var(--bg-surface);border:1px solid var(--border)">
+          <div id="shift-chart" class="chart-md"></div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="card p-4">
+            <div class="section-label mb-3">Perubahan Alokasi (Δ pp)</div>
+            <div class="space-y-2" id="delta-cards"><!-- populated by app.js --></div>
+          </div>
+
+          <div class="card p-4" style="border-left:3px solid rgba(245,158,11,0.5)">
+            <div class="text-xs font-semibold mb-1.5" style="color:var(--accent)">Catatan Metodologi</div>
+            <p class="text-xs leading-relaxed" style="color:var(--text-muted)">
+              Data 2024 = <strong class="text-white">realisasi auditee</strong>. Data 2025 = <strong class="text-white">plafon APBD murni</strong>. Variasi mencerminkan arah adaptasi prioritas belanja daerah.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         SECTION 5: STATISTICAL VALIDATION
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="section-validation" class="space-y-8 scroll-mt-20 fade-in">
+
+      <div class="max-w-2xl">
+        <div class="section-label mb-3">05 / Integritas &amp; Metodologi</div>
+        <h2 class="headline-display text-3xl sm:text-4xl font-bold mb-4 leading-tight" style="color:var(--text-primary)">
+          Dasar Statistik yang Kuat
+        </h2>
+        <p class="text-sm leading-relaxed" style="color:var(--text-muted);font-family:'Inter',sans-serif">
+          Setiap klaim dalam laporan ini bersandar pada angka yang dapat diverifikasi. Berikut tiga indikator kunci yang menjamin integritas analisis multivariat yang disajikan.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <div class="card p-6 space-y-3">
+          <div class="text-[10px] font-mono uppercase tracking-widest" style="color:var(--text-muted)">Kaiser-Meyer-Olkin (KMO)</div>
+          <div class="font-mono text-4xl font-bold" style="color:var(--text-primary)">0,54</div>
+          <div class="inline-flex text-[11px] font-mono px-2 py-0.5 rounded" style="background:rgba(52,211,153,0.1);color:#34d399;border:1px solid rgba(52,211,153,0.2)">
+            Layak Faktorisasi (&gt;0,50)
+          </div>
+          <p class="text-xs leading-relaxed" style="color:var(--text-muted)">
+            Uji Bartlett's Test of Sphericity: p &lt; 0,001. Korelasi antar ≥8 variabel numerik memenuhi syarat reduksi dimensi PCA.
+          </p>
+        </div>
+
+        <div class="card p-6 space-y-3">
+          <div class="text-[10px] font-mono uppercase tracking-widest" style="color:var(--text-muted)">Cumulative Variance Explained</div>
+          <div class="font-mono text-4xl font-bold" style="color:var(--text-primary)">61,14%</div>
+          <div class="inline-flex text-[11px] font-mono px-2 py-0.5 rounded" style="background:rgba(96,165,250,0.1);color:#60a5fa;border:1px solid rgba(96,165,250,0.2)">
+            2 Komponen Utama (PC1+PC2)
+          </div>
+          <p class="text-xs leading-relaxed" style="color:var(--text-muted)">
+            Dua komponen merangkum 61,14% keragaman variabel numerik secara ortogonal (hasil PCA pada dataset master).
+          </p>
+        </div>
+
+        <div class="card p-6 space-y-3">
+          <div class="text-[10px] font-mono uppercase tracking-widest" style="color:var(--text-muted)">Observasi Missing</div>
+          <div class="font-mono text-4xl font-bold" style="color:var(--accent)">2 Daerah</div>
+          <div class="inline-flex text-[11px] font-mono px-2 py-0.5 rounded" style="background:var(--accent-dim);color:var(--accent);border:1px solid rgba(245,158,11,0.2)">
+            Excluded dari PCA/Klaster
+          </div>
+          <p class="text-xs leading-relaxed" style="color:var(--text-muted)">
+            <strong style="color:var(--text-primary)">Kab. Barito Utara</strong> dan <strong style="color:var(--text-primary)">Kab. Pegunungan Bintang</strong> tanpa skor PCA/klaster. Kab. Grobogan punya flag data 2024 tidak lengkap, tetapi tetap punya koordinat PCA.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Full BPS Data References -->
+      <div class="card p-6 space-y-4">
+        <h3 class="text-sm font-semibold" style="color:var(--text-primary)">Referensi Data BPS &amp; Sumber Pendukung</h3>
+        <div class="space-y-2 text-xs font-mono" style="color:var(--text-muted)">
+          <div class="p-3 rounded-lg" style="background:var(--bg-elevated)">
+            <div class="font-semibold mb-0.5" style="color:var(--text-primary)">[1] Statistik Keuangan Pemerintah Kabupaten/Kota 2024 dan 2025</div>
+            <div>Volume 43, 2025. URL: <a href="https://www.bps.go.id/id/publication/2025/12/31/87d5c364dac7e52cb385313b/financial-statistics-of-regency-municipality-government-2024-and-2025.html" target="_blank" class="hover:underline" style="color:var(--accent)">bps.go.id/.../financial-statistics...</a></div>
+          </div>
+          <div class="p-3 rounded-lg" style="background:var(--bg-elevated)">
+            <div class="font-semibold mb-0.5" style="color:var(--text-primary)">[2] Indeks Pembangunan Manusia (IPM) Kabupaten/Kota — BPS RI</div>
+            <div>Tahun Data: 2024. URL: <a href="https://www.bps.go.id/assets/statistics-table/2/NDk0IzI=/-metode-baru--indeks-pembangunan-manusia-menurut-provinsi.html" target="_blank" class="hover:underline" style="color:var(--accent)">bps.go.id/.../indeks-pembangunan-manusia...</a></div>
+          </div>
+          <div class="p-3 rounded-lg" style="background:var(--bg-elevated)">
+            <div class="font-semibold mb-0.5" style="color:var(--text-primary)">[3] Persentase Penduduk Miskin (P0) — BPS RI</div>
+            <div>Tahun Data: Maret 2024. URL: <a href="https://www.bps.go.id/id/statistics-table/2/NjIxIzI=/persentase-penduduk-miskin-menurut-kabupaten-kota.html" target="_blank" class="hover:underline" style="color:var(--accent)">bps.go.id/.../persentase-penduduk-miskin...</a></div>
+          </div>
+          <div class="p-3 rounded-lg" style="background:var(--bg-elevated)">
+            <div class="font-semibold mb-0.5" style="color:var(--text-primary)">[4] PDRB Atas Dasar Harga Berlaku Kabupaten/Kota — BPS RI</div>
+            <div>Tahun Data: 2024. URL: <a href="https://www.bps.go.id/id/statistics-table/2/MjUzMyMy/pdrb-triwulanan-atas-dasar-harga-berlaku-menurut-lapangan-usaha-di-kabupaten-kota-seluruh-indonesia.html" target="_blank" class="hover:underline" style="color:var(--accent)">bps.go.id/.../pdrb-triwulanan...</a></div>
+          </div>
+          <div class="p-3 rounded-lg" style="background:var(--bg-elevated)">
+            <div class="font-semibold mb-0.5" style="color:var(--text-primary)">[5] Jumlah Penduduk Menurut Kabupaten/Kota dan Kelompok Umur — BPS RI</div>
+            <div>Tahun Data: 2024. URL: <a href="https://www.bps.go.id/id/statistics-table/2/Mjc5MCMy/-jumlah-penduduk-menurut-kabupaten-kota-dan-kelompok-umur.html" target="_blank" class="hover:underline" style="color:var(--accent)">bps.go.id/.../jumlah-penduduk-menurut-kabupaten-kota...</a></div>
+          </div>
+          <div class="p-3 rounded-lg" style="background:var(--bg-elevated)">
+            <div class="font-semibold mb-0.5" style="color:var(--text-primary)">[6] Peta Batas Administrasi Kabupaten/Kota Indonesia</div>
+            <div>Peta Batas Administrasi Kabupaten/Kota Indonesia (Shapefile / GeoJSON), diolah dari data dasar geospasial resmi wilayah Indonesia.</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================================================================
+       FOOTER
+  ================================================================ -->
+  <footer class="mt-24 py-12" style="border-top:1px solid var(--border)">
+    <div class="max-w-[1400px] mx-auto px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="space-y-1 text-center md:text-left">
+        <span class="font-semibold text-sm" style="color:var(--text-primary);font-family:'Fraunces',Georgia,serif">Ilusi Otonomi Fiskal</span>
+        <p class="text-xs" style="color:var(--text-muted)">Tugas Akhir Visualisasi Data · Semester 6 · Politeknik Statistika STIS</p>
+        <p class="text-xs" style="color:var(--text-dim)">Sumber utama: BPS RI · Batas wilayah digital: BIG/Kemendagri</p>
+      </div>
+      <div class="flex items-center gap-3 font-mono text-[11px]" style="color:var(--text-dim)">
+        <span>Apache ECharts 5.5</span>
+        <span style="color:var(--border)">·</span>
+        <span>Paul Tol Colorblind-Safe</span>
+        <span style="color:var(--border)">·</span>
+        <span>Client-Side SPA</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+
+  <!-- Fade-in on scroll observer -->
+  <script>
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

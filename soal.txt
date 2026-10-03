@@ -1,0 +1,199 @@
+                              POLITEKNIK STATISTIKA STIS
+                      PROGRAM STUDI KOMPUTASI STATISTIK
+
+                                   PROGRAM DIPLOMA IV
+
+Mata Kuliah                          LEMBAR SOAL
+Kode Mata Kuliah/SKS  UAS SEMESTER GENAP TA. 2025/2026
+Tingkat/Peminatan
+Hari/Tanggal/Jam                 Visualisasi Data dan Informasi
+Dosen Pengampu                   K203407 /2 Teori 1 Praktikum
+                                 3SD
+Waktu Ujian                      Senin/5 Oktober 2026/13.30-15.30
+Sifat Ujian                      Siti Mariyah, Ph.D.
+                                 Farid Ridho, M.T.
+                                 120 menit
+                                 Tidak Terstruktur
+
+SUB CAPAIAN PEMBELAJARAN MATA KULIAH (SUB-CPMK)
+ Sub-CPMK 3 Mampu menyeleksi dan menerapkan metode visualisasi data untuk berbagai tipe
+                       data dengan tepat berdasarkan taksonomi metode visualisasi data. (C4, A4, P4)
+ Sub-CPMK 5 Mampu merancang dan membangun dasbor informasi yang efektif dan tetap
+                       sasaran. (C6, A4, P4)
+ Sub-CPMK 6 Mampu merancang dan membangun data storytelling pada berbagai tema. (C6,
+                       A4, P4)
+
+PETUNJUK
+Ujian bersifat tidak terstruktur/take-home test yang dilakukan secara individu. Jawaban ujian berupa
+produk aplikasi atau laman web visualisasi yang dapat diakses oleh publik (petunjuk nomor 3) dan
+makalah dalam format IEEE (petunjuk nomor 5). Mahasiswa menandatangani bukti kehadiran dan
+mengumpulkan laporan/makalah dalam bentuk hardcopy sesuai jadwal dan ruang yang ditentukan
+oleh BAAK. Makalah dalam bentuk softcopy PDF dengan format nama file: kelas_nim_nama.pdf,
+diunggah melalui tautan: https://s.stis.ac.id/UAS-Visdat-2026 paling lambat pada hari dan sesi
+ujian.
+
+SOAL
+1. Visualisasi data harus mengandung minimal 3 dari 6 topik visualisasi data. Enam topik
+
+    visualisasi data terdiri dari:
+         a. Visualisasi data berdimensi tinggi (analisis multivariat)
+         b. Visualisasi data berjaring (network)
+         c. Visualisasi data berhierarki / berjenjang
+         d. Visualisasi data teks
+         e. Visualisasi data geospasial
+         f. Visualisasi data aliran (flow) atau pergerakan (movement)
+
+2. Data utama wajib bersumber dari BPS (Tabel statistik, Publikasi, Berita Resmi Statistik, atau
+    WebAPI BPS). Tema data dipilih sendiri (misalnya kemiskinan, ketenagakerjaan, pariwisata,
+    perdagangan, atau pendidikan). Contoh data untuk setiap topik tersedia pada Lampiran A.
+         a. Data pendukung non-BPS (misalnya batas wilayah digital) boleh digunakan.
+         b. Cantumkan judul tabel/publikasi, tahun data, URL, dan tanggal akses; tuliskan “Sumber:
+              BPS” pada setiap visualisasi.
+
+                                                                   1/4
+3. Produk proyek adalah aplikasi atau laman web visualisasi yang di-deploy dan dapat diakses
+    publik tanpa login maupun instalasi, serta repositori publik (GitHub/GitLab) yang berisi kode,
+    data terolah (jika ada), dan README.
+         a. Kerangka kerja dan platform bebas, misalnya Tableau, R Shiny/Quarto, Streamlit/
+              Dash/Plotly, D3.js, Observable, atau Vega-Lite; deployment melalui GitHub Pages,
+              shinyapps.io, Streamlit Community Cloud, Hugging Face Spaces, Netlify, atau Vercel.
+         b. Tautan proyek harus tetap aktif sampai nilai akhir diumumkan.
+
+4. Proyek harus memenuhi ketentuan minimal sesuai topik pada Lampiran A dan ketentuan umum
+    berikut:
+         a. Terdapat minimal satu bentuk interaksi yang bermakna (tooltip, filter, highlight, zoom,
+              atau drill-down).
+         b. Judul, legenda, satuan, dan sumber data jelas; pilihan encoding visual (posisi, warna,
+              ukuran, bentuk) dapat dijelaskan alasannya.
+         c. Palet warna ramah buta warna dan tampilan dapat dibuka dengan baik pada laptop
+              maupun ponsel.
+
+5. Buat makalah dalam format IEEE (template IEEE, dua kolom), terdiri dari 6–8 halaman,
+    referensi minimal 10, dan minimal 3 di antaranya berasal dari jurnal atau konferensi
+    internasional. Sitasi menggunakan gaya IEEE. Tuliskan alamat (URL) proyek yang dapat
+    diakses secara publik dan URL repositori di akhir makalah, setelah Kesimpulan.
+
+6. Struktur makalah (diawali abstrak maksimal 200 kata dan kata kunci):
+         a. Pendahuluan: latar belakang, permasalahan, dan tujuan proyek
+         b. Penelitian Terkait: kajian visualisasi sejenis dan teknik yang digunakan
+         c. Metodologi: data BPS, pra-pemrosesan, rancangan visualisasi, serta implementasi dan
+              deployment
+         d. Hasil dan Pembahasan: tangkapan layar aplikasi/laman web visualisasi, temuan/insight,
+              evaluasi rancangan, dan keterbatasan
+         e. Kesimpulan
+
+7. Integritas akademik. Pekerjaan harus orisinal dan dikerjakan sendiri; kutipan, kode, dan
+    gagasan dari sumber lain wajib dicantumkan. Penggunaan alat bantu berbasis AI diperbolehkan
+    sebatas alat bantu dan wajib dideklarasikan pada bagian Metodologi. Mahasiswa bertanggung
+    jawab penuh atas seluruh isi proyek dan dapat diminta menjelaskan atau mendemonstrasikan
+    hasilnya. Plagiarisme berakibat nilai nol.
+
+8. Penilaian mengikuti rubrik pada Lampiran B.
+
+                                    Selamat Mengerjakan, Semoga Sukses.
+
+                                                Validasi soal ujian
+                          Telah dibaca dan diperiksa tanggal 24 September 2026.
+
+Ketua Program Studi  Koordinator MK
+
+(………………………)          (Siti Mariyah)
+
+                                     2/4
+Lampiran A. Ketentuan Minimal dan Contoh Data BPS
+
+Contoh data bersifat saran. Mahasiswa boleh memilih data BPS lain yang sesuai dengan topik dan
+memenuhi ketentuan minimal.
+
+Topik            Contoh data BPS                        Ketentuan minimal
+
+Data             • Indikator per provinsi atau          • Minimal 8 variabel numerik dan 34 unit observasi
+berdimensi          kab/kota: IPM dan                   • Satu teknik reduksi dimensi (PCA/MDS/t-SNE/UMAP) ditambah
+tinggi              komponennya, kemiskinan, TPT,
+(multivariat)       rata-lama sekolah, pengeluaran         minimal 2 teknik lain (parallel coordinates, scatterplot matrix,
+                    per kapita, akses sanitasi dan air     heatmap terklaster, biplot, radar chart)
+                    minum layak                         • Brushing dan linking antar tampilan
+                                                        • Interpretasi kelompok dan pencilan
+                 • Profil sosial-ekonomi provinsi
+                    lintas tahun
+
+Data berjaring   • Tabel Input–Output (keterkaitan      • Minimal 30 node dengan edge berbobot
+                    antarsektor)                        • Graf node-link (force-directed) dan minimal satu tampilan
+
+                 • Migrasi atau perdagangan                alternatif (adjacency matrix atau arc diagram)
+                    antarprovinsi                       • Ukuran sentralitas (degree, betweenness, dsb.) dan/atau komunitas
+
+                 • Ekspor–impor menurut negara             dikodekan secara visual
+                    mitra dagang                        • Interaksi: highlight tetangga dan filter ambang bobot edge
+
+Data             • Struktur PDB menurut lapangan        • Minimal 3 level hirarki
+berhierarki         usaha                               • Minimal 2 representasi berbeda (treemap, sunburst, icicle, circle
+
+                 • Struktur pengeluaran rumah              packing, collapsible tree, dendrogram)
+                    tangga                              • Ukuran dan warna mengkodekan dua variabel yang berbeda
+                                                        • Drill-down/zoom dengan penunjuk posisi (breadcrumb)
+                 • Komoditas ekspor–impor
+                    menurut HS/SITC
+
+                 • Wilayah administrasi (provinsi–
+                    kab/kota–kecamatan)
+
+Data teks        • Berita Resmi Statistik (BRS)         • Korpus minimal 100 dokumen
+                 • Judul dan abstrak publikasi BPS      • Pra-pemrosesan terdokumentasi (case folding, tokenisasi, stopword
+                 • Metadata atau deskripsi
+                                                           Bahasa Indonesia, stemming/lemmatisasi)
+                    tabel/indikator (WebAPI BPS)        • Minimal 3 visualisasi (frekuensi kata/word cloud, TF-IDF, jaringan
+
+                                                           bigram atau ko-okurensi, topic modeling, KWIC, tren topik)
+                                                        • Filter periode atau kata kunci
+                                                        • Pengambilan data secara wajar dan sesuai ketentuan situs BPS
+
+Data geospasial  • Indikator per kab/kota:              • Tingkat kab/kota (± 500 unit) atau kecamatan
+                    kemiskinan, PDRB per kapita,        • Minimal 2 jenis peta berbeda (choropleth, proportional symbol,
+                    kepadatan penduduk, IPM, dsb.
+                                                           cartogram/tile grid map, hexbin, dot density)
+                 • Kode wilayah BPS sebagai kunci       • Metode klasifikasi dan palet warna dijustifikasi; choropleth
+                    penggabungan dengan batas
+                    wilayah digital                        memakai rasio/kepadatan, bukan angka absolut
+                                                        • Tooltip, legenda, zoom/pan, dan kontrol layer
+                                                        • Opsional: autokorelasi spasial (Moran’s I/LISA)
+
+Data aliran      • Migrasi antar provinsi (Sensus       • Minimal 15 entitas asal/tujuan
+atau                Penduduk/SUPAS)                     • Minimal 2 teknik (Sankey/alluvial, chord diagram, flow map,
+pergerakan
+                 • Komuter Jabodetabek                     matriks OD)
+                                                        • Volume dan arah dikodekan (ketebalan, warna, atau panah)
+                 • Ekspor–impor menurut negara          • Filter periode, asal, atau tujuan
+                    mitra atau pelabuhan
+
+                 • Kunjungan wisatawan
+                    mancanegara menurut pintu
+                    masuk dan negara asal
+
+                                                                           3/4
+Lampiran B. Rubrik Penilaian
+
+Kriteria          Bobot Indikator penilaian  Sub-CPMK
+
+Data BPS dan      20 Kesesuaian dan kualitas data, kejelasan sumber, kode Sub-CPMK3
+pengolahan                pengolahan yang terdokumentasi dan dapat direproduksi
+
+Rancangan         30 Ketepatan pemilihan teknik, kualitas encoding (posisi, Sub-CPMK3
+visualisasi               warna, ukuran), penerapan prinsip persepsi dan desain,
+                          pemenuhan ketentuan minimal topik
+Implementasi dan
+deployment        15 Interaktivitas berfungsi, tampilan responsif, dapat diakses Sub-CPMK5
+                          publik, repositori dan README memadai
+Makalah dan
+referensi         10 Format IEEE, struktur, kualitas bahasa, kecukupan dan Sub-CPMK5
+                          relevansi referensi, keterpaduan dengan proyek
+Insight dan
+pembahasan        15 Kedalaman interpretasi, kekuatan cerita data, evaluasi Sub-CPMK6
+                          kritis terhadap rancangan, keterbatasan
+Orisinalitas dan
+kreativitas       10 Keunikan tema dan pendekatan, kreativitas solusi visual Sub-CPMK6
+
+Total             100
+
+                                             4/4
+
